@@ -113,25 +113,8 @@ local function minimap_indoor()
 	return state
 end
 
-local function str2rgb(text)
-  if not text then return 1, 1, 1 end
-  if pfQuest_colors[text] then return unpack(pfQuest_colors[text]) end
-  if rgbcache[text] then return unpack(rgbcache[text]) end
-  local counter = 1
-  local l = string.len(text)
-  for i = 1, l, 3 do
-    counter = compat.mod(counter*8161, 4294967279) +
-        (string.byte(text,i)*16776193) +
-        ((string.byte(text,i+1) or (l-i+256))*8372226) +
-        ((string.byte(text,i+2) or (l-i+256))*3932164)
-  end
-  local hash = compat.mod(compat.mod(counter, 4294967291),16777216)
-  local r = (hash - (compat.mod(hash,65536))) / 65536
-  local g = ((hash - r*65536) - ( compat.mod((hash - r*65536),256)) ) / 256
-  local b = hash - r*65536 - g*256
-  rgbcache[text] = { r / 255, g / 255, b / 255 }
-  return unpack(rgbcache[text])
-end
+-- Use shared str2rgb function from config.lua (defined early in load order)
+local str2rgb = pfQuest_str2rgb
 
 local fpsmod, step
 local function NodeAnimate(self, zoom, alpha, fps)
@@ -601,6 +584,11 @@ function pfMap:DeleteNode(addon, title)
     end
   end
 
+  -- clear polygon zones for this quest
+  if pfPolygon and title then
+    pfPolygon:ClearQuest(title)
+  end
+
   pfMap.queue_update = GetTime()
 end
 
@@ -917,6 +905,11 @@ function pfMap:UpdateNodes()
   -- hide remaining pins
   for j=i, table.getn(pfMap.pins) do
     if pfMap.pins[j] then pfMap.pins[j]:Hide() end
+  end
+
+  -- render polygon zones
+  if pfPolygon then
+    pfPolygon:RenderZones()
   end
 end
 

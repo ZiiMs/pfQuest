@@ -6,6 +6,31 @@ pfQuest_history = {}
 pfQuest_colors = {}
 pfQuest_config = {}
 
+-- RGB color cache for performance
+local rgbcache = setmetatable({},{__mode="kv"})
+
+-- Shared color generation function used by spawnpoints and polyzones
+-- Defined as standalone global to avoid conflicts with pfQuest Frame
+function pfQuest_str2rgb(text)
+  if not text then return 1, 1, 1 end
+  if pfQuest_colors[text] then return unpack(pfQuest_colors[text]) end
+  if rgbcache[text] then return unpack(rgbcache[text]) end
+  local counter = 1
+  local l = string.len(text)
+  for i = 1, l, 3 do
+    counter = compat.mod(counter*8161, 4294967279) +
+        (string.byte(text,i)*16776193) +
+        ((string.byte(text,i+1) or (l-i+256))*8372226) +
+        ((string.byte(text,i+2) or (l-i+256))*3932164)
+  end
+  local hash = compat.mod(compat.mod(counter, 4294967291),16777216)
+  local r = (hash - (compat.mod(hash,65536))) / 65536
+  local g = ((hash - r*65536) - ( compat.mod((hash - r*65536),256)) ) / 256
+  local b = hash - r*65536 - g*256
+  rgbcache[text] = { r / 255, g / 255, b / 255 }
+  return unpack(rgbcache[text])
+end
+
 local reset = {
   config = function()
     local dialog = StaticPopupDialogs["PFQUEST_RESET"]
@@ -99,6 +124,8 @@ pfQuest_defconfig = {
     default = "1", type = "checkbox", config = "showcluster" },
   { text = L["Quest Objective Icons (Mini Map)"],
     default = "0", type = "checkbox", config = "showclustermini" },
+  { text = L["Show Quest Objective Zones"],
+    default = "1", type = "checkbox", config = "polygonzones" },
   { text = L["Display Available Quest Givers"],
     default = "1", type = "checkbox", config = "allquestgivers" },
   { text = L["Display Current Quest Givers"],

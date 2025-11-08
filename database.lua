@@ -1353,6 +1353,8 @@ function pfDatabase:SearchQuestID(id, meta, maps)
 
   -- prepare unified quest location markers
   local addon = meta["addon"] or "PFDB"
+  local original_questname = meta.quest  -- Save quest name before meta gets modified
+
   if pfMap.nodes[addon] then
     for map in pairs(pfMap.nodes[addon]) do
       if meta.quest and pfMap.unifiedcache[meta.quest] and pfMap.unifiedcache[meta.quest][map] then
@@ -1376,6 +1378,26 @@ function pfDatabase:SearchQuestID(id, meta, maps)
             meta["x"], meta["y"], meta["priority"] = getcluster(data.coords, meta["quest"]..hash..map)
             meta["texture"] = pfQuestConfig.path.."\\img\\cluster_misc" .. icon
             pfMap:AddNode(meta, true)
+          end
+        end
+      end
+    end
+  end
+
+  -- compute polygon zones for quest objectives
+  if pfPolygon and pfPolygon.config and pfPolygon.config.enabled == 1 then
+    if original_questname and pfMap.unifiedcache and pfMap.unifiedcache[original_questname] then
+      for mapid, hashdata in pairs(pfMap.unifiedcache[original_questname]) do
+        if hashdata then
+          for hash, data in pairs(hashdata) do
+            if data and data.coords and table.getn(data.coords) >= 3 then
+              -- Use same dynamic color as spawnpoints for this quest
+              local r, g, b = pfQuest_str2rgb(original_questname)
+              local color = {r = r, g = g, b = b}
+
+              -- Add polygon zones for this objective
+              pfPolygon:AddZones(original_questname, hash, data.coords, mapid, color)
+            end
           end
         end
       end
